@@ -167,9 +167,27 @@ public with sharing class DMLOperations {
      * @param oppNames The list of Opportunity names.
      */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
+        // Before the loop, create an empty list of Opportunities
+        List<Opportunity> opportunitiesToUpsert = new List<Opportunity>();
+
+        // Query the Account using the account name
+        Account targetAccount = [
+            SELECT Id
+            FROM Account
+            WHERE Name = :accountName
+            Limit 1
+        ];
+
         // Loop through each Opportunity name
+        for (String oppName : OppNames) {
             // Create an Opportunity with the given name
+            Opportunity newOpportunity = new Opportunity();
+            newOpportunity.Name = oppName;
+            newOpportunity.AccountId = targetAccount.Id;
             // Add the Opportunity to the list
+            opportunitiesToUpsert.add(newOpportunity);
+        }
+        upsert opportunitiesToUpsert;
     }
     
     /**
