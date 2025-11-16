@@ -171,15 +171,22 @@ public with sharing class DMLOperations {
         List<Opportunity> opportunitiesToUpsert = new List<Opportunity>();
 
         // Query the Account using the account name
-        Account targetAccount = [
+        List<Account> accounts = [
             SELECT Id
             FROM Account
             WHERE Name = :accountName
             Limit 1
         ];
 
+        if (accounts.isEmpty()) {
+            //Fail early with a meaningful message
+            throw new AuraHandledException('Account not found: ' + accountName);
+        }
+        
+        Account targetAccount = accounts[0];
+
         // Loop through each Opportunity name
-        for (String oppName : OppNames) {
+        for (String oppName : oppNames) {
             // Create an Opportunity with the given name
             Opportunity newOpportunity = new Opportunity();
             newOpportunity.Name = oppName;
