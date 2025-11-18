@@ -30,17 +30,19 @@ public with sharing class DMLOperations {
      * @return The Id of the newly created Account.
      */
     public static Id insertNewAccount() {
-        //Check object permissions
+        /**Check object permissions
         if (!Schema.sObjectType.Account.isCreateable()) {
             throw new Exception('You do not have permission to create Account records.');
         }
-        //Check field permissions
+        */
+        /**Check field permissions
         if (!Schema.SObjectType.Account.fields.Name.isCreateable()
             || !Schema.SObjectType.Account.fields.Phone.isCreateable()
             || !Schema.SObjectType.Account.fields.Industry.isCreateable()) {
             throw new Exception('You do not have permission to edit this field.');
         }
-
+        */
+        
         // Create a new Account instance
         Account acc = new Account();
 
