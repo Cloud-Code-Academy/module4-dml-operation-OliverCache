@@ -30,6 +30,17 @@ public with sharing class DMLOperations {
      * @return The Id of the newly created Account.
      */
     public static Id insertNewAccount() {
+        //Check object permissions
+        if (!Schema.sObjectType.Account.isCreateable()) {
+        throw new AuthorizationException('You do not have permission to create Account records.');
+        }
+        //Check field permissions
+        if (!Schema.SObjectType.Account.fields.Name.isCreateable()
+         || !Schema.SObjectType.Account.fields.Phone.isCreateable()
+         || !Schema.SObjectType.Account.fields.Industry.isCreateable()) {
+        throw new AuthorizationException('You do not have permission to edit this field.');            
+        }
+
         // Create a new Account instance
         Account acc = new Account();
 
@@ -37,6 +48,7 @@ public with sharing class DMLOperations {
         acc.Name = 'Test Account';
         acc.Phone = '555-555-5555';
         acc.Industry = 'Technology';
+
         // Insert the Account into the database
         insert acc; 
         // Return the Id of the newly created Account
@@ -88,7 +100,11 @@ public with sharing class DMLOperations {
      */
     public static void updateContactLastName(Id contactId, String newLastName) {
         // Retrieve the Contact from the database
-        targetContact = [SELECT Id, LastName FROM Contact WHERE Id = :contactId];
+        targetContact = [SELECT Id, 
+        LastName 
+        FROM Contact 
+        WHERE Id = :contactId
+        WITH SECURITY_ENFORCED];
 
         // Update the Contact's last name
         targetContact.LastName = newLastName;
@@ -106,7 +122,11 @@ public with sharing class DMLOperations {
      */
     public static void updateOpportunityStage(Id oppId, String newStage) {
         // Retrieve the Opportunity from the database
-        Opportunity targetOpportunity = [SELECT Id, StageName FROM Opportunity WHERE Id = :oppId];
+        Opportunity targetOpportunity = [SELECT Id,
+        StageName 
+        FROM Opportunity
+        WHERE Id = :oppId
+        WITH SECURITY_ENFORCED];
 
         // Update the Opportunity's stage
         targetOpportunity.StageName = newStage;
@@ -125,7 +145,12 @@ public with sharing class DMLOperations {
      */
     public static void updateAccountFields(Id accountId, String newName, String newIndustry) {
         // Query the account
-        Account targetAccount = [SELECT Id, Name, Industry FROM Account WHERE Id = :accountId];
+        Account targetAccount = [SELECT Id,
+        Name, 
+        Industry 
+        FROM Account 
+        WHERE Id = :accountId
+        WITH SECURITY_ENFORCED];
 
         // Update the Account with the given Id with the new name and industry
         targetAccount.Name = newName;
@@ -175,6 +200,7 @@ public with sharing class DMLOperations {
             SELECT Id
             FROM Account
             WHERE Name = :accountName
+            WITH SECURITY_ENFORCED
             Limit 1
         ];
 
@@ -211,6 +237,7 @@ public with sharing class DMLOperations {
             SELECT Id, Name, Description 
             FROM Account 
             WHERE Name = :accountName
+            WITH SECURITY_ENFORCED
             LIMIT 1
         ];
 
