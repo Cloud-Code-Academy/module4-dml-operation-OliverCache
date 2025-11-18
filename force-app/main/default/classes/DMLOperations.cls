@@ -100,7 +100,7 @@ public with sharing class DMLOperations {
      */
     public static void updateContactLastName(Id contactId, String newLastName) {
         // Retrieve the Contact from the database
-        targetContact = [SELECT Id, 
+        Contact targetContact = [SELECT Id, 
         LastName 
         FROM Contact 
         WHERE Id = :contactId
@@ -178,7 +178,7 @@ public with sharing class DMLOperations {
             oppty.Amount = 50000; 
         }
         // Upsert the opportunities List so that records are either updated or created
-        upsert Opportunity; 
+        upsert opportunities; 
     }
 
     /**
@@ -254,9 +254,7 @@ public with sharing class DMLOperations {
         targetAccount.Name = accountName;
         targetAccount.Description = 'New Account';
         } 
-
-        Account targetAccount = new Account();
-
+        
 		// Upsert the Account
 		upsert targetAccount;
 
