@@ -32,13 +32,13 @@ public with sharing class DMLOperations {
     public static Id insertNewAccount() {
         //Check object permissions
         if (!Schema.sObjectType.Account.isCreateable()) {
-            throw new AuthorizationException('You do not have permission to create Account records.');
+            throw new Exception('You do not have permission to create Account records.');
         }
         //Check field permissions
         if (!Schema.SObjectType.Account.fields.Name.isCreateable()
             || !Schema.SObjectType.Account.fields.Phone.isCreateable()
             || !Schema.SObjectType.Account.fields.Industry.isCreateable()) {
-            throw new AuthorizationException('You do not have permission to edit this field.');
+            throw new Exception('You do not have permission to edit this field.');
         }
 
         // Create a new Account instance
@@ -203,10 +203,16 @@ public with sharing class DMLOperations {
             WITH SECURITY_ENFORCED
             LIMIT 1
         ];
+
+        //Choose the account we're going to use
+        Account targetAccount;
         //Upsert the account to create it if it doesn't exist
-        Account targetAccount = upsertAccount(accountName);
+        if (accounts.isEmpty()) {
+            targetAccount = upsertAccount(accountName);
+        } else {
         //If account exists assign the first one to this variable
-        Account targetAccount = accounts[0];
+        targetAccount = accounts[0];
+        }
         // Loop through each Opportunity name
         for (String oppName : oppNames) {
             // Create an Opportunity with the given name
@@ -218,7 +224,8 @@ public with sharing class DMLOperations {
             // Add the Opportunity to the list
             opportunitiesToUpsert.add(newOpportunity);
         }
-        upsert opportunitiesToUpsert;
+        // Insert all opportunities
+        insert OpportunitiesToUpsert;
     }
     
     /**
