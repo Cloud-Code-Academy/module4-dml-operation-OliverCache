@@ -42,7 +42,7 @@ public with sharing class DMLOperations {
             throw new Exception('You do not have permission to edit this field.');
         }
         */
-        
+
         // Create a new Account instance
         Account acc = new Account();
 
@@ -83,7 +83,7 @@ public with sharing class DMLOperations {
         Contact newContact = new Contact();
         // Set some fields on the Contact
         newContact.LastName = 'Test Contact'; // Required Field
-        newcontact.Firstname = 'Test'; 
+        newContact.FirstName = 'Test';
         newContact.Phone = '555-555-5555';
         newContact.Email = 'test@email.com';
         // Set the AccountId field to the given accountId
@@ -111,7 +111,7 @@ public with sharing class DMLOperations {
 
         // Update the Contact's last name
         targetContact.LastName = newLastName;
-        
+
         // Update the Contact in the database
         update targetContact;
     }
@@ -161,7 +161,6 @@ public with sharing class DMLOperations {
         update targetAccount;
     }
 
-
     /**
      * Question 7
      * Create or updates an Opportunities
@@ -197,6 +196,7 @@ public with sharing class DMLOperations {
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
         // Before the loop, create an empty list of Opportunities
         List<Opportunity> opportunitiesToUpsert = new List<Opportunity>();
+
         // Query the Account using the account name
         List<Account> accounts = [
             SELECT Id
@@ -206,30 +206,50 @@ public with sharing class DMLOperations {
             LIMIT 1
         ];
 
-        //Choose the account we're going to use
+        // Choose the account we're going to use
         Account targetAccount;
-        //Upsert the account to create it if it doesn't exist
         if (accounts.isEmpty()) {
-            targetAccount = upsertAccount(accountName);
+            // Create / upsert the Account if it doesn't exist
+            targetAccount = upsertAccount(accountName); // returns Account
         } else {
-        //If account exists assign the first one to this variable
-        targetAccount = accounts[0];
+            targetAccount = accounts[0];
         }
+
+        // Find existing Opportunities for this account with these names
+        List<Opportunity> existingOpps = [
+            SELECT Id, Name
+            FROM Opportunity
+            WHERE AccountId = :targetAccount.Id
+            AND Name IN :oppNames
+        ];
+
+        // Map existing opps by Name for quick lookup
+        Map<String, Opportunity> existingByName = new Map<String, Opportunity>();
+        for (Opportunity o : existingOpps) {
+            existingByName.put(o.Name, o);
+        }
+
         // Loop through each Opportunity name
         for (String oppName : oppNames) {
-            // Create an Opportunity with the given name
             Opportunity newOpportunity = new Opportunity();
+
+            // If an opp with this name already exists, reuse its Id so upsert updates it
+            if (existingByName.containsKey(oppName)) {
+                newOpportunity.Id = existingByName.get(oppName).Id;
+            }
+
             newOpportunity.Name = oppName;
             newOpportunity.AccountId = targetAccount.Id;
             newOpportunity.StageName = 'Prospecting';
             newOpportunity.CloseDate = Date.today().addDays(30);
-            // Add the Opportunity to the list
+
             opportunitiesToUpsert.add(newOpportunity);
         }
-        // Insert all opportunities
-        insert OpportunitiesToUpsert;
+
+        // Upsert all opportunities (updates existing, inserts new)
+        upsert opportunitiesToUpsert;
     }
-    
+
     /**
      * Question 9
      * Upserts an Account with the specified name.
@@ -266,7 +286,7 @@ public with sharing class DMLOperations {
         upsert targetAccount;
 
         return targetAccount;
-	}
+    }
 
     /**
      * Question 10
@@ -320,7 +340,6 @@ public with sharing class DMLOperations {
         // Delete the same Lead
         delete leadsToInsert;
     }
-
 
     /**
      * Question 12
