@@ -30,18 +30,7 @@ public with sharing class DMLOperations {
      * @return The Id of the newly created Account.
      */
     public static Id insertNewAccount() {
-        /**Check object permissions
-        if (!Schema.sObjectType.Account.isCreateable()) {
-            throw new Exception('You do not have permission to create Account records.');
-        }
-        */
-        /**Check field permissions
-        if (!Schema.SObjectType.Account.fields.Name.isCreateable()
-            || !Schema.SObjectType.Account.fields.Phone.isCreateable()
-            || !Schema.SObjectType.Account.fields.Industry.isCreateable()) {
-            throw new Exception('You do not have permission to edit this field.');
-        }
-        */
+        validateAccountCreatePermissions();
 
         // Create a new Account instance
         Account acc = new Account();
@@ -51,8 +40,8 @@ public with sharing class DMLOperations {
         acc.Phone = '555-555-5555';
         acc.Industry = 'Technology';
 
-        // Insert the Account into the database
-        insert acc;
+        // Insert the Account into the database with user mode enforcement
+        insert as user acc;
         // Return the Id of the newly created Account
         return acc.Id;
     }
@@ -64,12 +53,14 @@ public with sharing class DMLOperations {
      * @param industry The industry of the account to be created.
      */
     public static void createAccount(String name, String industry) {
+        validateAccountCreatePermissions(new List<String>{'Name', 'Industry'});
+        
         // Create a new Account and set the fields inline
         Account acc = new Account();
         acc.Name = name;
         acc.Industry = industry;
-        // Insert the Account
-        insert acc;
+        // Insert the Account with user mode enforcement
+        insert as user acc;
     }
 
     /**
@@ -79,6 +70,8 @@ public with sharing class DMLOperations {
      * @return The Id of the newly created Contact.
      */
     public static Id insertNewContact(Id accountId) {
+        validateContactCreatePermissions();
+        
         // Create a new Contact instance
         Contact newContact = new Contact();
         // Set some fields on the Contact
@@ -88,8 +81,8 @@ public with sharing class DMLOperations {
         newContact.Email = 'test@email.com';
         // Set the AccountId field to the given accountId
         newContact.AccountId = accountId;
-        // Insert the Contact into the database
-        insert newContact;
+        // Insert the Contact into the database with user mode enforcement
+        insert as user newContact;
         // Return the Id of the newly created Contact
         return newContact.Id;
     }
@@ -102,18 +95,20 @@ public with sharing class DMLOperations {
      * @param newLastName The new last name for the Contact.
      */
     public static void updateContactLastName(Id contactId, String newLastName) {
-        // Retrieve the Contact from the database
+        validateContactUpdatePermissions();
+        
+        // Retrieve the Contact from the database with user mode
         Contact targetContact = [SELECT Id,
             LastName
             FROM Contact
             WHERE Id = :contactId
-            WITH SECURITY_ENFORCED];
+            WITH USER_MODE];
 
         // Update the Contact's last name
         targetContact.LastName = newLastName;
 
-        // Update the Contact in the database
-        update targetContact;
+        // Update the Contact in the database with user mode enforcement
+        update as user targetContact;
     }
 
     /**
@@ -124,18 +119,20 @@ public with sharing class DMLOperations {
      * @param newStage The new stage for the Opportunity.
      */
     public static void updateOpportunityStage(Id oppId, String newStage) {
-        // Retrieve the Opportunity from the database
+        validateOpportunityUpdatePermissions();
+        
+        // Retrieve the Opportunity from the database with user mode
         Opportunity targetOpportunity = [SELECT Id,
             StageName
             FROM Opportunity
             WHERE Id = :oppId
-            WITH SECURITY_ENFORCED];
+            WITH USER_MODE];
 
         // Update the Opportunity's stage
         targetOpportunity.StageName = newStage;
 
-        // Update the Opportunity in the database
-        update targetOpportunity;
+        // Update the Opportunity in the database with user mode enforcement
+        update as user targetOpportunity;
     }
 
     /**
@@ -147,18 +144,20 @@ public with sharing class DMLOperations {
      * @param newIndustry The new industry for the account.
      */
     public static void updateAccountFields(Id accountId, String newName, String newIndustry) {
-        // Query the account
+        validateAccountUpdatePermissions();
+        
+        // Query the account with user mode
         Account targetAccount = [SELECT Id,
             Name,
             Industry
             FROM Account
             WHERE Id = :accountId
-            WITH SECURITY_ENFORCED];
+            WITH USER_MODE];
 
         // Update the Account with the given Id with the new name and industry
         targetAccount.Name = newName;
         targetAccount.Industry = newIndustry;
-        update targetAccount;
+        update as user targetAccount;
     }
 
     /**
@@ -170,6 +169,8 @@ public with sharing class DMLOperations {
      * @param list of Opportunities to be changed then upserted.
      */
     public static void upsertOpportunityList(List<Opportunity> opportunities) {
+        validateOpportunityUpsertPermissions();
+        
         // Loop through each Opportunity in the list
         for (Opportunity oppty : opportunities) {
             // Set the Opportunity's Stage to Qualification
@@ -179,8 +180,8 @@ public with sharing class DMLOperations {
             // Set the Opportunity's Amount to 50000
             oppty.Amount = 50000;
         }
-        // Upsert the opportunities List so that records are either updated or created
-        upsert opportunities;
+        // Upsert the opportunities List so that records are either updated or created with user mode
+        upsert as user opportunities;
     }
 
     /**
@@ -197,12 +198,14 @@ public with sharing class DMLOperations {
         // Before the loop, create an empty list of Opportunities
         List<Opportunity> opportunitiesToUpsert = new List<Opportunity>();
 
-        // Query the Account using the account name
+        validateOpportunityUpsertPermissions();
+        
+        // Query the Account using the account name with user mode
         List<Account> accounts = [
             SELECT Id
             FROM Account
             WHERE Name = :accountName
-            WITH SECURITY_ENFORCED
+            WITH USER_MODE
             LIMIT 1
         ];
 
@@ -221,6 +224,7 @@ public with sharing class DMLOperations {
             FROM Opportunity
             WHERE AccountId = :targetAccount.Id
             AND Name IN :oppNames
+            WITH USER_MODE
         ];
 
         // Map existing opps by Name for quick lookup
@@ -246,8 +250,8 @@ public with sharing class DMLOperations {
             opportunitiesToUpsert.add(newOpportunity);
         }
 
-        // Upsert all opportunities (updates existing, inserts new)
-        upsert opportunitiesToUpsert;
+        // Upsert all opportunities (updates existing, inserts new) with user mode
+        upsert as user opportunitiesToUpsert;
     }
 
     /**
@@ -259,12 +263,14 @@ public with sharing class DMLOperations {
      * @return The Account that was upserted.
      */
     public static Account upsertAccount(String accountName) {
-        // Query for the Account
+        validateAccountUpsertPermissions();
+        
+        // Query for the Account with user mode
         List<Account> accounts = [
             SELECT Id, Name, Description
             FROM Account
             WHERE Name = :accountName
-            WITH SECURITY_ENFORCED
+            WITH USER_MODE
             LIMIT 1
         ];
 
@@ -282,8 +288,8 @@ public with sharing class DMLOperations {
             targetAccount.Description = 'New Account';
         }
 
-        // Upsert the Account
-        upsert targetAccount;
+        // Upsert the Account with user mode
+        upsert as user targetAccount;
 
         return targetAccount;
     }
@@ -322,6 +328,8 @@ public with sharing class DMLOperations {
      * @param leadNames The list of Lead names to be inserted.
      */
     public static void insertAndDeleteLeads(List<String> leadNames) {
+        validateLeadCRUDPermissions();
+        
         // Create a list to store lead records
         List<Lead> leadsToInsert = new List<Lead>();
 
@@ -334,11 +342,11 @@ public with sharing class DMLOperations {
             leadsToInsert.add(l);
         }
 
-        // Insert Leads
-        insert leadsToInsert;
+        // Insert Leads with user mode
+        insert as user leadsToInsert;
 
-        // Delete the same Lead
-        delete leadsToInsert;
+        // Delete the same Lead with user mode
+        delete as user leadsToInsert;
     }
 
     /**
@@ -348,6 +356,8 @@ public with sharing class DMLOperations {
      * @param numOfCases The number of cases to create.
      */
     public static void createAndDeleteCases(String accountId, Integer numOfCases) {
+        validateCaseCRUDPermissions();
+        
         List<Case> casesToCreate = new List<Case>();
 
         // Create the cases in memory
@@ -362,10 +372,151 @@ public with sharing class DMLOperations {
             casesToCreate.add(c);
         }
 
-        // Insert all cases at once
-        insert casesToCreate;
+        // Insert all cases at once with user mode
+        insert as user casesToCreate;
 
-        // Delete them all at once
-        delete casesToCreate;
+        // Delete them all at once with user mode
+        delete as user casesToCreate;
+    }
+
+    // Helper methods to reduce cognitive complexity
+    private static void validateAccountCreatePermissions() {
+        if (!Schema.sObjectType.Account.isCreateable()) {
+            throw new DmlException('You do not have permission to create Account records.');
+        }
+        if (!Schema.SObjectType.Account.fields.Name.isCreateable()
+            || !Schema.SObjectType.Account.fields.Phone.isCreateable()
+            || !Schema.SObjectType.Account.fields.Industry.isCreateable()) {
+            throw new DmlException('You do not have permission to create one or more Account fields.');
+        }
+    }
+
+    private static void validateAccountCreatePermissions(List<String> fieldNames) {
+        if (!Schema.sObjectType.Account.isCreateable()) {
+            throw new DmlException('You do not have permission to create Account records.');
+        }
+        for (String fieldName : fieldNames) {
+            if (!Schema.SObjectType.Account.fields.getMap().get(fieldName).getDescribe().isCreateable()) {
+                throw new DmlException('You do not have permission to create Account field: ' + fieldName);
+            }
+        }
+    }
+
+    private static void validateContactCreatePermissions() {
+        if (!Schema.sObjectType.Contact.isCreateable()) {
+            throw new DmlException('You do not have permission to create Contact records.');
+        }
+        if (!Schema.SObjectType.Contact.fields.LastName.isCreateable()
+            || !Schema.SObjectType.Contact.fields.FirstName.isCreateable()
+            || !Schema.SObjectType.Contact.fields.Phone.isCreateable()
+            || !Schema.SObjectType.Contact.fields.Email.isCreateable()
+            || !Schema.SObjectType.Contact.fields.AccountId.isCreateable()) {
+            throw new DmlException('You do not have permission to create one or more Contact fields.');
+        }
+    }
+
+    private static void validateContactUpdatePermissions() {
+        if (!Schema.sObjectType.Contact.isAccessible()) {
+            throw new QueryException('You do not have permission to access Contact records.');
+        }
+        if (!Schema.sObjectType.Contact.isUpdateable()) {
+            throw new DmlException('You do not have permission to update Contact records.');
+        }
+        if (!Schema.SObjectType.Contact.fields.Id.isAccessible()
+            || !Schema.SObjectType.Contact.fields.LastName.isAccessible()
+            || !Schema.SObjectType.Contact.fields.LastName.isUpdateable()) {
+            throw new DmlException('You do not have permission to access or update Contact fields.');
+        }
+    }
+
+    private static void validateOpportunityUpdatePermissions() {
+        if (!Schema.sObjectType.Opportunity.isAccessible()) {
+            throw new QueryException('You do not have permission to access Opportunity records.');
+        }
+        if (!Schema.sObjectType.Opportunity.isUpdateable()) {
+            throw new DmlException('You do not have permission to update Opportunity records.');
+        }
+        if (!Schema.SObjectType.Opportunity.fields.Id.isAccessible()
+            || !Schema.SObjectType.Opportunity.fields.StageName.isAccessible()
+            || !Schema.SObjectType.Opportunity.fields.StageName.isUpdateable()) {
+            throw new DmlException('You do not have permission to access or update Opportunity fields.');
+        }
+    }
+
+    private static void validateAccountUpdatePermissions() {
+        if (!Schema.sObjectType.Account.isAccessible()) {
+            throw new QueryException('You do not have permission to access Account records.');
+        }
+        if (!Schema.sObjectType.Account.isUpdateable()) {
+            throw new DmlException('You do not have permission to update Account records.');
+        }
+        if (!Schema.SObjectType.Account.fields.Id.isAccessible()
+            || !Schema.SObjectType.Account.fields.Name.isAccessible()
+            || !Schema.SObjectType.Account.fields.Industry.isAccessible()
+            || !Schema.SObjectType.Account.fields.Name.isUpdateable()
+            || !Schema.SObjectType.Account.fields.Industry.isUpdateable()) {
+            throw new DmlException('You do not have permission to access or update Account fields.');
+        }
+    }
+
+    private static void validateOpportunityUpsertPermissions() {
+        if (!Schema.sObjectType.Opportunity.isCreateable() || !Schema.sObjectType.Opportunity.isUpdateable()) {
+            throw new DmlException('You do not have permission to create or update Opportunity records.');
+        }
+        if (!Schema.SObjectType.Opportunity.fields.StageName.isCreateable()
+            || !Schema.SObjectType.Opportunity.fields.StageName.isUpdateable()
+            || !Schema.SObjectType.Opportunity.fields.CloseDate.isCreateable()
+            || !Schema.SObjectType.Opportunity.fields.CloseDate.isUpdateable()
+            || !Schema.SObjectType.Opportunity.fields.Amount.isCreateable()
+            || !Schema.SObjectType.Opportunity.fields.Amount.isUpdateable()) {
+            throw new DmlException('You do not have permission to create or update Opportunity fields.');
+        }
+    }
+
+    private static void validateAccountUpsertPermissions() {
+        if (!Schema.sObjectType.Account.isAccessible()) {
+            throw new QueryException('You do not have permission to access Account records.');
+        }
+        if (!Schema.sObjectType.Account.isCreateable() || !Schema.sObjectType.Account.isUpdateable()) {
+            throw new DmlException('You do not have permission to create or update Account records.');
+        }
+        if (!Schema.SObjectType.Account.fields.Id.isAccessible()
+            || !Schema.SObjectType.Account.fields.Name.isAccessible()
+            || !Schema.SObjectType.Account.fields.Description.isAccessible()
+            || !Schema.SObjectType.Account.fields.Name.isCreateable()
+            || !Schema.SObjectType.Account.fields.Name.isUpdateable()
+            || !Schema.SObjectType.Account.fields.Description.isCreateable()
+            || !Schema.SObjectType.Account.fields.Description.isUpdateable()) {
+            throw new DmlException('You do not have permission to access or modify Account fields.');
+        }
+    }
+
+    private static void validateLeadCRUDPermissions() {
+        if (!Schema.sObjectType.Lead.isCreateable()) {
+            throw new DmlException('You do not have permission to create Lead records.');
+        }
+        if (!Schema.sObjectType.Lead.isDeletable()) {
+            throw new DmlException('You do not have permission to delete Lead records.');
+        }
+        if (!Schema.SObjectType.Lead.fields.LastName.isCreateable()
+            || !Schema.SObjectType.Lead.fields.Company.isCreateable()) {
+            throw new DmlException('You do not have permission to create Lead fields.');
+        }
+    }
+
+    private static void validateCaseCRUDPermissions() {
+        if (!Schema.sObjectType.Case.isCreateable()) {
+            throw new DmlException('You do not have permission to create Case records.');
+        }
+        if (!Schema.sObjectType.Case.isDeletable()) {
+            throw new DmlException('You do not have permission to delete Case records.');
+        }
+        if (!Schema.SObjectType.Case.fields.AccountId.isCreateable()
+            || !Schema.SObjectType.Case.fields.Subject.isCreateable()
+            || !Schema.SObjectType.Case.fields.Description.isCreateable()
+            || !Schema.SObjectType.Case.fields.Origin.isCreateable()
+            || !Schema.SObjectType.Case.fields.Status.isCreateable()) {
+            throw new DmlException('You do not have permission to create Case fields.');
+        }
     }
 }
